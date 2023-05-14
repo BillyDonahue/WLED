@@ -12,7 +12,7 @@ const char name[] = "flashnote";
  */
 class FlashnoteUsermod : public Usermod {
 public:
-  void setup() override { initDone_ = true; }
+  void setup() override { setup_ = true; }
 
   void loop() override {
     if (fakePeriod_) {
@@ -32,7 +32,7 @@ public:
   }
 
   void addToJsonState(JsonObject &root) override {
-    if (!initDone_)
+    if (!setup_)
       return;
     JsonObject usermod = root[FPSTR(name)];
     if (usermod.isNull())
@@ -41,7 +41,7 @@ public:
   }
 
   void readFromJsonState(JsonObject &root) {
-    if (!initDone_)
+    if (!setup_)
       return; // prevent crash on boot applyPreset()
 
     JsonObject usermod = root[FPSTR(name)];
@@ -72,19 +72,20 @@ public:
 
   void handleOverlayDraw() override {
     auto now = millis();
-    auto end = impulseAlarm_ + impulseDuration_;
-    if (now >= end)
-      return;
-    int rel = static_cast<int>(255 * (end - now) / impulseDuration_);
-    auto flashColor = RGBW32(rel, rel, rel, rel);
-    for (uint16_t i = 0; i < strip.getLengthTotal(); ++i)
-      strip.setPixelColor(i, flashColor);
+    auto end = impulseStart_ + impulseDuration_;
+    if (now < end) {
+      auto rel = static_cast<byte>(255. * (end - now) / impulseDuration_);
+      auto flashColor = RGBW32(0, rel, 0, 0);  // green
+      for (uint16_t px = 0; px < strip.getLengthTotal(); ++px)
+        strip.setPixelColor(px, flashColor);
+      colorUpdated(CALL_MODE_NOTIFICATION);
+    }
   }
 
   void onStateChange(uint8_t mode) override {}
 
 private:
-  bool initDone_ = false;
+  bool setup_ = false;
 
   // config
   unsigned long impulseDuration_ = 1000;
