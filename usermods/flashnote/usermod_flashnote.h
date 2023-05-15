@@ -6,12 +6,10 @@ namespace {
 
 const char name[] = "flashnote";
 
-const auto colorWhite = RGBW32(255, 255, 255, 0);
+// RGBW32(255, 255, 255, 0);
+const auto colorWhite = CRGB::White;
 
-template <typename T>
-T clamp(T x, T lo, T hi) {
-    return min(max(x, lo), hi);
-}
+template <typename T> T clamp(T x, T lo, T hi) { return min(max(x, lo), hi); }
 
 /*
  * Flashnote flashes a segment in response to a musical note.
@@ -75,7 +73,7 @@ public:
     JsonObject top = root[FPSTR(name)];
     bool ok = !top.isNull();
     ok &= getJsonValue(top["impulseDuration"], impulseDuration_, 500);
-    ok &= getJsonValue(top["flashColor"], flashColor_, colorWhite);
+    ok &= getJsonValue(top["flashColor"], flashColor_, CRGB::White);
     ok &= getJsonValue(top["flashIntensity"], flashIntensity_, 100);
     ok &= getJsonValue(top["fakePeriod"], fakePeriod_, 5000);
     return ok;
@@ -88,24 +86,25 @@ public:
       // phase is how far along [0,1.0] in the impulse we are.
       auto phase = (now - impulseStart_) * 1. / impulseDuration_;
       phase = clamp(phase, 0.0, 1.0);
-      double flash[4]{
+      double flash[3]{
           static_cast<double>(R(flashColor_)),
           static_cast<double>(G(flashColor_)),
           static_cast<double>(B(flashColor_)),
-          static_cast<double>(W(flashColor_)),
       };
+
+      auto flashFactor = 1e-2 * flashIntensity_ * (1.0 - phase);
+
       for (uint16_t px = 0; px < strip.getLengthTotal(); ++px) {
         auto oc32 = strip.getPixelColor(px);
-        double oc[4]{
+        double oc[3]{
             static_cast<double>(R(oc32)),
             static_cast<double>(G(oc32)),
             static_cast<double>(B(oc32)),
-            static_cast<double>(W(oc32)),
         };
-        for (int i = 0; i != 4; ++i) {
-          oc[i] += 1e-2 * flashIntensity_ * (1.0 - phase) * (flash[i] - oc[i]);
+        for (int i = 0; i != sizeof(oc) / sizeof(oc[0]); ++i) {
+          oc[i] = oc[i] + flashFactor * (flash[i] - oc[i]);
         }
-        strip.setPixelColor(px, RGBW32(oc[0], oc[1], oc[2], oc[3]));
+        strip.setPixelColor(px, RGBW32(oc[0], oc[1], oc[2], 0));
       }
       colorUpdated(CALL_MODE_NOTIFICATION);
     }
@@ -120,7 +119,7 @@ private:
   unsigned long impulseDuration_ = 1000;
   unsigned long flashColor_ = RGBW32(255, 255, 255, 0);
   unsigned long fakePeriod_ = 5000; // periodically simulate a hit
-  uint8_t flashIntensity_ = 100;  // %
+  uint8_t flashIntensity_ = 100;    // %
 
   // runtime state
   unsigned long impulseAlarm_ = 0; // next trigger millis
