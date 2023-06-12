@@ -135,9 +135,6 @@ class PhillipsWho : public Usermod {
           last_checked_wifi = 0;
           state_change_fired_ms = 0;
       }
-
-      //Dont waste CPU
-      delay(50);
     }
 };
 
