@@ -87,9 +87,9 @@ class PhilipsWho : public Usermod {
     {
       JsonObject top = root[FPSTR(_name)];
       bool configComplete = !top.isNull();
-      configComplete &= getJsonValue(top["activity_led_pin"], activity_led_pin, 14);
+      configComplete &= getJsonValue(top["activity_led_pin"], activity_led_pin, 13);
       configComplete &= getJsonValue(top["activity_led_on_period"], activity_led_on_period, 1000);
-      configComplete &= getJsonValue(top["wifi_status_led_pin"], wifi_status_led_pin, 13);
+      configComplete &= getJsonValue(top["wifi_status_led_pin"], wifi_status_led_pin, 14);
       configComplete &= getJsonValue(top["enabled"], enabled, false);
 
       // Turn off LED's if disabling
