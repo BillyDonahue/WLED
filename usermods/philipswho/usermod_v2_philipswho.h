@@ -3,13 +3,13 @@
 #include "wled.h"
 
 /*
-* PhillipsWho Usermod class that reads information 
+* PhilipsWho Usermod class that reads information 
 * from WLED and lights LED's as a result. 
 * LED 1: wifi connection status
 * LED 2: WLED activity status
 * Contact: chill@chillaspect.com
 */
-class PhillipsWho : public Usermod {
+class PhilipsWho : public Usermod {
   private:
     static const char _name[];
     static const char _enabled[];
@@ -103,7 +103,7 @@ class PhillipsWho : public Usermod {
     * Initial Setup - Called once on boot
     */
     void setup() {
-      Serial.println("PhillipsWho - Setup");
+      Serial.println("PhilipsWho - Setup");
       pinMode(led_wifi_gpio, OUTPUT);
       pinMode(led_activity_gpio, OUTPUT);
       digitalWrite(led_wifi_gpio, LOW);
@@ -139,5 +139,5 @@ class PhillipsWho : public Usermod {
 };
 
 // strings to reduce flash memory usage (used more than twice)
-const char PhillipsWho::_name[]     PROGMEM = "PhillipsWho";
-const char PhillipsWho::_enabled[]  PROGMEM = "enabled";
+const char PhilipsWho::_name[]     PROGMEM = "PhilipsWho";
+const char PhilipsWho::_enabled[]  PROGMEM = "enabled";
