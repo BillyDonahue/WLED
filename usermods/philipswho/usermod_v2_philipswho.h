@@ -22,11 +22,11 @@ class PhilipsWho : public Usermod {
     unsigned long last_checked_wifi = 0;
 
     //How long the Activity LED remains on when activity detected
-    const unsigned long activity_led_on_period = 1000;
+    unsigned long activity_led_on_period = 1000;
     
     //Default Pin Values
-    int led_wifi_gpio = 13;
-    int led_activity_gpio = 14;
+    int activity_led_pin = 13;
+    int wifi_status_led_pin = 14;
 
     //Enabled Bool
     bool enabled = false;
@@ -43,9 +43,9 @@ class PhilipsWho : public Usermod {
     */
     void check_wifi() {
       if(WLED_CONNECTED){
-          digitalWrite(led_wifi_gpio, HIGH);
+          digitalWrite(wifi_status_led_pin, HIGH);
       }else{
-          digitalWrite(led_wifi_gpio, LOW);
+          digitalWrite(wifi_status_led_pin, LOW);
       }
     }
 
@@ -64,7 +64,7 @@ class PhilipsWho : public Usermod {
     * This includes light and configuration changes
     */
     void onStateChange(uint8_t mode){
-      digitalWrite(led_activity_gpio, HIGH);
+      digitalWrite(activity_led_pin, HIGH);
       state_change_fired_ms = millis();
     }
 
@@ -74,8 +74,9 @@ class PhilipsWho : public Usermod {
     void addToConfig(JsonObject& root)
     {
       JsonObject top = root.createNestedObject(FPSTR(_name));
-      top["activity_led_pin"] = led_activity_gpio;
-      top["wifi_status_led_pin"] = led_wifi_gpio;
+      top["activity_led_pin"] = activity_led_pin;
+      top["activity_led_on_period"] = activity_led_on_period;
+      top["wifi_status_led_pin"] = wifi_status_led_pin;
       top["enabled"] = enabled;
     }
 
@@ -86,14 +87,15 @@ class PhilipsWho : public Usermod {
     {
       JsonObject top = root[FPSTR(_name)];
       bool configComplete = !top.isNull();
-      configComplete &= getJsonValue(top["activity_led_pin"], led_activity_gpio, 14);
-      configComplete &= getJsonValue(top["wifi_status_led_pin"], led_wifi_gpio, 13);
+      configComplete &= getJsonValue(top["activity_led_pin"], activity_led_pin, 13);
+      configComplete &= getJsonValue(top["activity_led_on_period"], activity_led_on_period, 1000);
+      configComplete &= getJsonValue(top["wifi_status_led_pin"], wifi_status_led_pin, 14);
       configComplete &= getJsonValue(top["enabled"], enabled, false);
 
       // Turn off LED's if disabling
       if(!enabled){
-          digitalWrite(led_wifi_gpio, LOW);
-          digitalWrite(led_activity_gpio, LOW);
+          digitalWrite(wifi_status_led_pin, LOW);
+          digitalWrite(activity_led_pin, LOW);
       }
 
       return configComplete;
@@ -104,10 +106,10 @@ class PhilipsWho : public Usermod {
     */
     void setup() {
       Serial.println("PhilipsWho - Setup");
-      pinMode(led_wifi_gpio, OUTPUT);
-      pinMode(led_activity_gpio, OUTPUT);
-      digitalWrite(led_wifi_gpio, LOW);
-      digitalWrite(led_activity_gpio, LOW);
+      pinMode(wifi_status_led_pin, OUTPUT);
+      pinMode(activity_led_pin, OUTPUT);
+      digitalWrite(wifi_status_led_pin, LOW);
+      digitalWrite(activity_led_pin, LOW);
     }
 
     /*
@@ -127,7 +129,7 @@ class PhilipsWho : public Usermod {
       }
 
       if(current_ms - state_change_fired_ms >= activity_led_on_period){
-          digitalWrite(led_activity_gpio, LOW);
+          digitalWrite(activity_led_pin, LOW);
       }
 
       //Check for millis overflow - reset back to 0
