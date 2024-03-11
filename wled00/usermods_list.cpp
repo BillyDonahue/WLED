@@ -204,6 +204,11 @@
 #ifdef USERMOD_STAIRCASE_WIPE
 #include "../usermods/stairway_wipe_basic/stairway-wipe-usermod-v2.h"
 #endif
+
+#ifdef USERMOD_PHILIPSWHO
+  #include "../usermods/philipswho/usermod_v2_philipswho.h"
+#endif
+
 void registerUsermods()
 {
 /*
@@ -211,7 +216,7 @@ void registerUsermods()
    * || || ||
    * \/ \/ \/
    */
-  //usermods.add(new MyExampleUsermod());
+
   #ifdef USERMOD_BATTERY
   usermods.add(new UsermodBattery());
   #endif
@@ -386,5 +391,9 @@ void registerUsermods()
 
   #ifdef USERMOD_STAIRCASE_WIPE
   usermods.add(new StairwayWipeUsermod());
+  #endif
+
+  #ifdef USERMOD_PHILIPSWHO
+  usermods.add(new PhilipsWho());
   #endif
 }
