@@ -446,7 +446,8 @@
 #ifdef ESP8266
   #define JSON_BUFFER_SIZE 10240
 #else
-  #define JSON_BUFFER_SIZE 24576
+  // #define JSON_BUFFER_SIZE 24576
+  #define JSON_BUFFER_SIZE 60000
 #endif
 
 //#define MIN_HEAP_SIZE (8k for AsyncWebServer)
