@@ -1,0 +1,20 @@
+;
+;  copy this file to platformio_override.ini
+;
+[platformio]
+default_envs = xiao32c3_with_flash_effect, mitch_breadbox
+
+[env:mitch_breadbox]
+;; ESP32s3dev_8MB but adding flash effect UserMod
+extends = env:esp32dev
+build_flags =
+    ${env:esp32dev.build_flags}
+    -DUSERMOD_PHILIPS_WHO
+
+[env:xiao32c3_with_flash_effect]
+extends = env:esp32s3dev_8MB
+build_flags =
+    ${env:esp32s3dev.build_flags}
+    -DUSERMOD_PHILIPS_WHO
+    -DUSERMOD_FLASH_EFFECT
+
