@@ -205,6 +205,10 @@
 #include "../usermods/stairway_wipe_basic/stairway-wipe-usermod-v2.h"
 #endif
 
+#ifdef USERMOD_FLASH_EFFECT
+#include "../usermods/FlashEffect/flash_effect.h"
+#endif
+
 #ifdef USERMOD_PHILIPSWHO
   #include "../usermods/philipswho/usermod_v2_philipswho.h"
 #endif
@@ -395,5 +399,9 @@ void registerUsermods()
 
   #ifdef USERMOD_PHILIPSWHO
   usermods.add(new PhilipsWho());
+  #endif
+
+  #ifdef USERMOD_FLASH_EFFECT
+  usermods.add(new FlashEffect());
   #endif
 }
