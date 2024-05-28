@@ -14,13 +14,17 @@ platformio_override.ini example to enable this mod:
     build_flags = ${env:esp32s3dev_8MB.build_flags} -DUSERMOD_FLASH_EFFECT
 */
 
+const char flashEffectSpec[] PROGMEM = "Flash@Duration;!,!;!;01";
+
 struct FlashEffect : Usermod {
   void setup() override {
-    static const char spec[] PROGMEM = "Flash@Duration;!,!;!;01";
-    strip.addEffect(255, &flashEffect_, spec);
+    strip.addEffect(255, &flashEffect_, flashEffectSpec);
+    Serial.println("flash setup");
   }
 
-  void loop() override {}
+  void loop() override {
+    // Serial.println("flash loop");
+  }
 
   /**
     * onStateChanged() is used to detect WLED state change
@@ -29,19 +33,38 @@ struct FlashEffect : Usermod {
   void onStateChange(uint8_t mode) override {
     Usermod::onStateChange(mode);
     // do something if WLED state changed (color, brightness, effect, preset, etc)
+    Serial.printf("onStateChange mode=%d\n", mode);
   }
 
 private:
   static uint16_t flashEffect_() {
-    // Use 'aux0' to store effect start time.
-    if (SEGMENT.call == 0)
-      SEGMENT.aux0 = strip.now;
-    uint32_t maxDuration = 1000;
-    uint32_t duration = SEGMENT.speed * maxDuration / 255 + FRAMETIME * 2;
-    uint32_t color = SEGCOLOR(1);
-    if (strip.now - SEGMENT.aux0 < duration)
-      color = SEGCOLOR(0);
-    SEGMENT.fill(color);
+    if (SEGMENT.call == 0) {
+      needs_restart_ = true;
+    }
+
+    if (needs_restart_) {
+      Serial.printf("flashEffect starting\n");
+      uint32_t maxDuration = 1000;
+      endCall_ = SEGMENT.call + SEGMENT.speed * maxDuration / FRAMETIME / 256;
+      needs_restart_ = false;
+    }
+
+    // Which call do we shut off at?
+
+    //Serial.printf("flashEffect duration=%d\n", duration);
+    if (SEGMENT.call < endCall_) {
+      uint32_t color = SEGCOLOR(0);
+      Serial.printf("flashEffect dt=%d, now=%d, t0=%d, %x\n",
+                    strip.now - SEGMENT.aux0,
+                    strip.now,
+                    SEGMENT.aux0,
+                    color);
+      SEGMENT.fill(color);
+    } else if (SEGMENT.call == duration) {
+      uint32_t color = SEGCOLOR(1);
+      Serial.printf("flashEffect ending %d %x\n", SEGMENT.call, color);
+      SEGMENT.fill(color);
+    }
     return FRAMETIME;
   }
 };
