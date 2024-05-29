@@ -64,7 +64,11 @@ private:
     }
 
     if (SEGMENT.call < SEGMENT.aux0) {
-      uint32_t color = SEGCOLOR(0);
+      uint32_t amount = (SEGMENT.aux0 - SEGMENT.call) * 20;
+      if (amount > 255) {
+        amount = 255;
+      }
+      uint32_t color = color_fade(SEGCOLOR(0), amount, false);
       SEGMENT.fill(color);
     } else if (SEGMENT.call == SEGMENT.aux0) {
       uint32_t color = SEGCOLOR(1);
