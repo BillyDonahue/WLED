@@ -16,7 +16,7 @@ platformio_override.ini example to enable this mod:
 //static const char _data_FX_MODE_SCAN[] PROGMEM = "Scan@!,# of dots,,,,,Overlay;!,!,!;!";
 //const char flashEffectSpec[] PROGMEM = "Flash@Duration;!,!;!;01";
 const char flashEffectSpec[] PROGMEM = "Flash@Duration,,,,,,Overlay;!,!;!;01";
-bool flash_reset;
+bool flash_reset[256];
 
 struct FlashEffect : Usermod {
   bool initDone = false;
@@ -49,18 +49,20 @@ struct FlashEffect : Usermod {
     auto seg_obj = flash["seg_id"];
     if(seg_obj.isNull()) return;
     uint16_t seg_id = seg_obj;
-    flash_reset = true;
+    if (seg_id >= 256) return;
+    flash_reset[seg_id] = true;
     Serial.printf("reset flash_effect seg_id=%d\n", seg_id);
   }
 
 private:
   static uint16_t flashEffect_() {
-  
-    if(flash_reset){
-      //do something
+    uint8_t seg_id = strip.getCurrSegmentId();
+    if(flash_reset[seg_id]){
       uint32_t maxDuration = 1000;
-      flash_reset = false;
+      flash_reset[seg_id] = false;
       SEGMENT.aux0 = SEGMENT.call + SEGMENT.speed * maxDuration / FRAMETIME / 256;
+      
+      Serial.printf("Start flashEffect segment_id=%d \n", seg_id);
     }
 
     if (SEGMENT.call < SEGMENT.aux0) {
