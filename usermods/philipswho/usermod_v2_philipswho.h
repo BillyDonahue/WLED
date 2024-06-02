@@ -2,6 +2,10 @@
 
 #include "wled.h"
 
+// strings to reduce flash memory usage (used more than twice)
+static const char PhilipsWho_name[] PROGMEM = "PhilipsWho";
+static const char PhilipsWho_enabled[] PROGMEM = "enabled";
+
 /*
 * PhilipsWho Usermod class that reads information
 * from WLED and lights LED's as a result.
@@ -11,9 +15,8 @@
 */
 class PhilipsWho : public Usermod {
   private:
-    // strings to reduce flash memory usage (used more than twice)
-    static const char PhilipsWho::_name[] PROGMEM = "PhilipsWho";
-    static const char PhilipsWho::_enabled[] PROGMEM = "enabled";
+    static constexpr auto& _name = PhilipsWho_name;
+    static constexpr auto& _enabled = PhilipsWho_enabled;
 
   public:
     //How frequently to check for wifi
