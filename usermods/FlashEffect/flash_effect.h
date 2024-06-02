@@ -67,25 +67,21 @@ struct FlashEffect : Usermod {
   * Read Settings from Configuration File
   */
   bool readFromConfig(JsonObject& root) override {
-#if 0
-    JsonObject top = root[FPSTR(_name)];
+    JsonObject top = root[flash_effect_name];
     bool configComplete = !top.isNull();
-    configComplete &= getJsonValue(top["activity_led_pin"], activity_led_pin, 13);
-    configComplete &= getJsonValue(top["activity_led_on_period"], activity_led_on_period, 1000);
-    configComplete &= getJsonValue(top["wifi_status_led_pin"], wifi_status_led_pin, 14);
-    configComplete &= getJsonValue(top["enabled"], enabled, false);
-
-    // Turn off LED's if disabling
-    if(!enabled){
-        digitalWrite(wifi_status_led_pin, LOW);
-        digitalWrite(activity_led_pin, LOW);
-    }
+    configComplete &= getJsonValue(top["drum_length_0"], drum_lengths[0], 0);
+    configComplete &= getJsonValue(top["drum_length_1"], drum_lengths[1], 0);
+    configComplete &= getJsonValue(top["drum_length_2"], drum_lengths[2], 0);
+    configComplete &= getJsonValue(top["drum_length_3"], drum_lengths[3], 0);
+    configComplete &= getJsonValue(top["drum_length_4"], drum_lengths[4], 0);
+    configComplete &= getJsonValue(top["drum_length_5"], drum_lengths[5], 0);
+    configComplete &= getJsonValue(top["drum_length_6"], drum_lengths[6], 0);
+    configComplete &= getJsonValue(top["drum_length_7"], drum_lengths[7], 0);
+    configComplete &= getJsonValue(top["drum_length_8"], drum_lengths[8], 0);
+    configComplete &= getJsonValue(top["drum_length_9"], drum_lengths[9], 0);
+    top["enabled"] = enabled;
 
     return configComplete;
-#else
-  return true;
-#endif
-
   }
 
   /**
@@ -124,10 +120,14 @@ struct FlashEffect : Usermod {
     flash_now = millis();
     uint32_t impulse;
 
-    //Loop through segments and see if they need to be flashed
-    uint8_t seg_size = strip.getSegmentsNum();
-    auto segments = strip.getSegments();
-    for(uint8_t i=0; i < seg_size; i++){
+    //Loop through drums and see if they need to be flashed
+    int drumStart = 0;
+    for (uint8_t i = 0; i < 10; ++i) {
+      auto len = drum_lengths[i];
+      if (len == 0)
+        break;
+      drumStart += len;
+
       if(flash_data[i].start_ms + default_duration <= flash_now) continue;
 
       if(flash_data[i].start_requested){
@@ -137,7 +137,7 @@ struct FlashEffect : Usermod {
       }
 
       impulse = impulseResponse(flash_now - flash_data[i].start_ms);
-      flash_segment(segments[i], impulse);
+      flash_pixel_range(drumStart - len, drumStart, impulse);
     }
 
     //Force the strip to update asap
@@ -150,10 +150,11 @@ struct FlashEffect : Usermod {
   * 255 = just started, 0 = ending
   * To Do: Add snap shot of colors as 2nd param, fade to that instead of pallet color
   */
-  void flash_segment(Segment segment, uint32_t impulse){
-    bool pallet_solid_wrap = (strip.paletteBlend == 1 || strip.paletteBlend == 3);
-    for (int i = 0; i < segment.length(); i++) {
-      segment.setPixelColor(i, color_blend(segment.color_from_palette(i, true, pallet_solid_wrap, 0), WHITE, impulse));
+  void flash_pixel_range(int startPixel, int endPixel, uint32_t impulse){
+    // bool pallet_solid_wrap = (strip.paletteBlend == 1 || strip.paletteBlend == 3);
+    for (int i = startPixel; i < endPixel; i++) {
+      strip.setPixelColor(i, color_blend(BLACK, WHITE, impulse));
+      // strip.color_from_palette(i, true, pallet_solid_wrap, 0),  TBD
     }
   }
 
