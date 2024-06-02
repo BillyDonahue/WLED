@@ -26,11 +26,14 @@ struct FlashData {
 };
 
 FlashData flash_data[256]{};
+const char flash_effect_name[] = "FlashEffect";
 
 struct FlashEffect : Usermod {
   bool initDone = false;
   uint16_t default_duration = 200;
   uint32_t default_color = WHITE;
+  bool enabled = true;
+  uint8_t drum_lengths[10];
 
   void setup() override {
     Serial.println("flash setup");
@@ -42,6 +45,49 @@ struct FlashEffect : Usermod {
     return;
   }
 
+  /*
+  * Add settings to the configuration file
+  */
+  void addToConfig(JsonObject& root) override {
+    JsonObject top = root.createNestedObject(flash_effect_name);
+    top["drum_length_0"] = drum_lengths[0];
+    top["drum_length_1"] = drum_lengths[1];
+    top["drum_length_2"] = drum_lengths[2];
+    top["drum_length_3"] = drum_lengths[3];
+    top["drum_length_4"] = drum_lengths[4];
+    top["drum_length_5"] = drum_lengths[5];
+    top["drum_length_6"] = drum_lengths[6];
+    top["drum_length_7"] = drum_lengths[7];
+    top["drum_length_8"] = drum_lengths[8];
+    top["drum_length_9"] = drum_lengths[9];
+    top["enabled"] = enabled;
+  }
+
+  /*
+  * Read Settings from Configuration File
+  */
+  bool readFromConfig(JsonObject& root) override {
+#if 0
+    JsonObject top = root[FPSTR(_name)];
+    bool configComplete = !top.isNull();
+    configComplete &= getJsonValue(top["activity_led_pin"], activity_led_pin, 13);
+    configComplete &= getJsonValue(top["activity_led_on_period"], activity_led_on_period, 1000);
+    configComplete &= getJsonValue(top["wifi_status_led_pin"], wifi_status_led_pin, 14);
+    configComplete &= getJsonValue(top["enabled"], enabled, false);
+
+    // Turn off LED's if disabling
+    if(!enabled){
+        digitalWrite(wifi_status_led_pin, LOW);
+        digitalWrite(activity_led_pin, LOW);
+    }
+
+    return configComplete;
+#else
+  return true;
+#endif
+
+  }
+
   /**
     * onStateChanged() is used to detect WLED state change
     * @mode parameter is CALL_MODE_... parameter used for notifications
@@ -51,7 +97,7 @@ struct FlashEffect : Usermod {
     // do something if WLED state changed (color, brightness, effect, preset, etc)
     Serial.printf("onStateChange mode=%d\n", mode);
   }
-  
+
   void readFromJsonState(JsonObject& root) override {
     if (!initDone) return;
     if(!root["flash_enable"].isNull()){
