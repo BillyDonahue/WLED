@@ -31,10 +31,10 @@ const char flash_effect_name[] = "FlashEffect";
 
 struct FlashEffect : Usermod {
   bool initDone = false;
-  uint16_t default_duration = 200;
-  uint32_t default_color = WHITE;
+  uint16_t default_duration_ms = 200;
   bool enabled = true;
   uint8_t drum_lengths[10];
+  uint32_t pixel_colors[1024];
 
   void setup() override {
     Serial.println("flash setup");
@@ -51,6 +51,7 @@ struct FlashEffect : Usermod {
   */
   void addToConfig(JsonObject& root) override {
     JsonObject top = root.createNestedObject(flash_effect_name);
+    top["default_duration_ms"] = default_duration_ms;
     top["drum_length_0"] = drum_lengths[0];
     top["drum_length_1"] = drum_lengths[1];
     top["drum_length_2"] = drum_lengths[2];
@@ -70,6 +71,7 @@ struct FlashEffect : Usermod {
   bool readFromConfig(JsonObject& root) override {
     JsonObject top = root[flash_effect_name];
     bool configComplete = !top.isNull();
+    configComplete &= getJsonValue(top["default_duration_ms"], default_duration_ms, 200);
     configComplete &= getJsonValue(top["drum_length_0"], drum_lengths[0], 0);
     configComplete &= getJsonValue(top["drum_length_1"], drum_lengths[1], 0);
     configComplete &= getJsonValue(top["drum_length_2"], drum_lengths[2], 0);
@@ -80,8 +82,7 @@ struct FlashEffect : Usermod {
     configComplete &= getJsonValue(top["drum_length_7"], drum_lengths[7], 0);
     configComplete &= getJsonValue(top["drum_length_8"], drum_lengths[8], 0);
     configComplete &= getJsonValue(top["drum_length_9"], drum_lengths[9], 0);
-    top["enabled"] = enabled;
-
+    configComplete &= getJsonValue(top["enabled"], enabled, true);
     return configComplete;
   }
 
@@ -91,12 +92,11 @@ struct FlashEffect : Usermod {
     */
   void onStateChange(uint8_t mode) override {
     Usermod::onStateChange(mode);
-    // do something if WLED state changed (color, brightness, effect, preset, etc)
     Serial.printf("onStateChange mode=%d\n", mode);
   }
 
   void readFromJsonState(JsonObject& root) override {
-    if (!initDone) return;
+    if (!initDone || !enabled) return;
     if(!root["flash_enable"].isNull()){
       flash_enable = (root["flash_enable"] == 1);
       Serial.printf("flash_effect enable=%d\n", flash_enable);
@@ -118,36 +118,38 @@ struct FlashEffect : Usermod {
       flash_data[seg_id].start_requested = true;
       Serial.printf("flash_effect seg_id=%d vel=%d\n", seg_id, velocity);
     }
-    //Serial.printf("flash_effect seg_id=%d\n", seg_id);
   }
 
   /*
   * Called right before show() Last chance to alter leds before they are shown
   */
   void handleOverlayDraw() override {
-    if(!flash_enable) return;
+    if(!initDone || !enabled || !flash_enable) return;
     
     flash_now = millis();
     uint32_t impulse;
 
     //Loop through drums and see if they need to be flashed
-    int drumStart = 0;
+    int drumEnd = 0;
     for (uint8_t i = 0; i < 10; ++i) {
       auto len = drum_lengths[i];
-      if (len == 0)
-        break;
-      drumStart += len;
+      if (len == 0) break;
+      int drumStart = drumEnd;
+      drumEnd += len;
+      
+      //If this segment is not being flashed, skip it
+      if(flash_data[i].start_ms + default_duration_ms <= flash_now) continue;
 
-      if(flash_data[i].start_ms + default_duration <= flash_now) continue;
-
+      //On the first iteration of a flash, take snapshot of the segment's colors
       if(flash_data[i].start_requested){
-        // Take snapshot of segment colors before flashing, array of colors same size as segment
-        // Then pass the snapshot to flash_segment as parameter
+        for(uint32_t j = drumStart; j < drumEnd; j++){
+          pixel_colors[j] = strip.getPixelColor(j);
+        }
         flash_data[i].start_requested = false;
       }
 
       impulse = impulseResponse(flash_now - flash_data[i].start_ms);
-      flash_pixel_range(drumStart - len, drumStart, impulse);
+      flash_pixel_range(drumStart, drumEnd, impulse, flash_data[i].velocity);
     }
 
     //Force the strip to update asap
@@ -157,21 +159,48 @@ struct FlashEffect : Usermod {
   /*
   * Flash the wled segment.
   * impulse is a value between 255-0 that indicates how far into the flash we are
-  * 255 = just started, 0 = ending
-  * To Do: Add snap shot of colors as 2nd param, fade to that instead of pallet color
+  *   255 = just started, 0 = ending
+  * velocity is a value between 0-127 indicating how hard the drum was struck
   */
-  void flash_pixel_range(int startPixel, int endPixel, uint32_t impulse){
-    // bool pallet_solid_wrap = (strip.paletteBlend == 1 || strip.paletteBlend == 3);
+  void flash_pixel_range(int startPixel, int endPixel, uint32_t impulse, uint8_t velocity){
+    uint32_t flash_color;
     for (int i = startPixel; i < endPixel; i++) {
-      strip.setPixelColor(i, color_blend(BLACK, WHITE, impulse));
-      // strip.color_from_palette(i, true, pallet_solid_wrap, 0),  TBD
+      flash_color = scaleColor(pixel_colors[i], velocity);
+      strip.setPixelColor(i, color_blend(pixel_colors[i], flash_color, impulse));
     }
   }
 
+
   uint32_t impulseResponse(uint32_t elapsed_ms){
-    uint32_t response = 256 * (default_duration-elapsed_ms) / default_duration;
+    uint32_t response = 256 * (default_duration_ms-elapsed_ms) / default_duration_ms;
     if (response > 255) response = 255;
     if (response <= 0) response = 1;
     return response;
+  }
+
+  /*
+  * Scale a color's brightness up by velocity (0-127)
+  * Max brightness 255 will be white
+  */
+  uint32_t scaleColor(uint32_t color, uint32_t velocity){
+    uint8_t r = R(color);
+    uint8_t g = G(color);
+    uint8_t b = B(color);
+    uint8_t w = W(color);
+    r = constrain(velocity+r, 0, 255);
+    g = constrain(velocity+g, 0, 255);
+    b = constrain(velocity+b, 0, 255);
+    return RGBW32(r,g,b,w);
+  }
+
+  /*
+  * Returns avg brightness of the color (0-255)
+  */
+  uint8_t getColorBrightness(uint32_t color){
+    uint8_t r = R(color);
+    uint8_t g = G(color);
+    uint8_t b = B(color);
+    uint8_t avg = (r + g + b) / 3;
+    return avg;
   }
 };
