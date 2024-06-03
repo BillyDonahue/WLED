@@ -22,6 +22,7 @@ bool flash_enable = true;
 
 struct FlashData {
   uint32_t start_ms;
+  uint8_t velocity;
   bool start_requested;
 };
 
@@ -102,13 +103,22 @@ struct FlashEffect : Usermod {
     }
     JsonObject flash = root["flash"];
     if(flash.isNull()) return;
-    auto seg_obj = flash["seg_id"];
-    if(seg_obj.isNull()) return;
-    uint16_t seg_id = seg_obj;
-    if (seg_id >= 256) return;
-    flash_data[seg_id].start_ms = millis();
-    flash_data[seg_id].start_requested = true;
-    Serial.printf("flash_effect seg_id=%d\n", seg_id);
+    uint8_t velocity = 64;
+    if(!flash["vel"].isNull()){
+      velocity = flash["vel"];
+    }
+    JsonArray seg_arr = flash["seg"];
+    if(seg_arr.isNull()) return;
+    uint8_t seg_id;
+    for(uint8_t i = 0; i < seg_arr.size(); i++){
+      seg_id = flash["seg"][i];
+      if(seg_id>=256) continue;
+      flash_data[seg_id].start_ms = millis();
+      flash_data[seg_id].velocity = velocity;
+      flash_data[seg_id].start_requested = true;
+      Serial.printf("flash_effect seg_id=%d vel=%d\n", seg_id, velocity);
+    }
+    //Serial.printf("flash_effect seg_id=%d\n", seg_id);
   }
 
   /*
