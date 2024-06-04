@@ -24,6 +24,7 @@ struct FlashData {
   uint32_t start_ms;
   uint8_t velocity;
   bool start_requested;
+  uint32_t color;
 };
 
 FlashData flash_data[256]{};
@@ -107,6 +108,13 @@ struct FlashEffect : Usermod {
     if(!flash["vel"].isNull()){
       velocity = flash["vel"];
     }
+    uint32_t color = WHITE;
+    if(!flash["col"].isNull()){
+      const char* colStr = flash["col"];
+      byte colorInt[4]{};
+      colorFromHexString(colorInt, colStr);
+      color = RGBW32(colorInt[0], colorInt[1], colorInt[2], colorInt[3]);
+    }
     JsonArray seg_arr = flash["seg"];
     if(seg_arr.isNull()) return;
     uint8_t seg_id;
@@ -116,7 +124,8 @@ struct FlashEffect : Usermod {
       flash_data[seg_id].start_ms = millis();
       flash_data[seg_id].velocity = velocity;
       flash_data[seg_id].start_requested = true;
-      Serial.printf("flash_effect seg_id=%d vel=%d\n", seg_id, velocity);
+      flash_data[seg_id].color = color;
+      Serial.printf("flash_effect seg_id=%d vel=%d,col=%x\n", seg_id, velocity, color);
     }
   }
 
@@ -149,7 +158,8 @@ struct FlashEffect : Usermod {
       }
 
       impulse = impulseResponse(flash_now - flash_data[i].start_ms);
-      flash_pixel_range(drumStart, drumEnd, impulse, flash_data[i].velocity);
+      uint32_t targetColor = color_fade(flash_data[i].color, flash_data[i].velocity * 2);
+      flash_pixel_range(drumStart, drumEnd, impulse, targetColor);
     }
 
     //Force the strip to update asap
@@ -162,10 +172,10 @@ struct FlashEffect : Usermod {
   *   255 = just started, 0 = ending
   * velocity is a value between 0-127 indicating how hard the drum was struck
   */
-  void flash_pixel_range(int startPixel, int endPixel, uint32_t impulse, uint8_t velocity){
+  void flash_pixel_range(int startPixel, int endPixel, uint32_t impulse, uint32_t targetColor){
     uint32_t flash_color;
     for (int i = startPixel; i < endPixel; i++) {
-      flash_color = scaleColor(pixel_colors[i], velocity);
+      flash_color = scaleColor(pixel_colors[i], targetColor);
       strip.setPixelColor(i, color_blend(pixel_colors[i], flash_color, impulse));
     }
   }
@@ -182,14 +192,14 @@ struct FlashEffect : Usermod {
   * Scale a color's brightness up by velocity (0-127)
   * Max brightness 255 will be white
   */
-  uint32_t scaleColor(uint32_t color, uint32_t velocity){
+  uint32_t scaleColor(uint32_t color, uint32_t targetColor){
     uint8_t r = R(color);
     uint8_t g = G(color);
     uint8_t b = B(color);
     uint8_t w = W(color);
-    r = constrain(velocity+r, 0, 255);
-    g = constrain(velocity+g, 0, 255);
-    b = constrain(velocity+b, 0, 255);
+    r = constrain(R(targetColor) + r, 0, 255);
+    g = constrain(G(targetColor) + g, 0, 255);
+    b = constrain(B(targetColor) + b, 0, 255);
     return RGBW32(r,g,b,w);
   }
 
