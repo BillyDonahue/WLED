@@ -25,6 +25,7 @@ struct FlashData {
   uint8_t velocity;
   bool start_requested;
   uint32_t color;
+  uint32_t duration_ms;
 };
 
 FlashData flash_data[256]{};
@@ -108,6 +109,10 @@ struct FlashEffect : Usermod {
     if(!flash["vel"].isNull()){
       velocity = flash["vel"];
     }
+    uint32_t duration_ms = 0;
+    if(!flash["dur"].isNull()){
+      duration_ms = flash["dur"];
+    }
     uint32_t color = WHITE;
     if(!flash["col"].isNull()){
       const char* colStr = flash["col"];
@@ -125,6 +130,7 @@ struct FlashEffect : Usermod {
       flash_data[seg_id].velocity = velocity;
       flash_data[seg_id].start_requested = true;
       flash_data[seg_id].color = color;
+      flash_data[seg_id].duration_ms = duration_ms;
       Serial.printf("flash_effect seg_id=%d vel=%d,col=%x\n", seg_id, velocity, color);
     }
   }
@@ -146,8 +152,12 @@ struct FlashEffect : Usermod {
       int drumStart = drumEnd;
       drumEnd += len;
       
+      //If User provided a duration, use that. If not use default
+      uint32_t duration = default_duration_ms;
+      if(flash_data[i].duration_ms > 0) duration = flash_data[i].duration_ms;
+
       //If this segment is not being flashed, skip it
-      if(flash_data[i].start_ms + default_duration_ms <= flash_now) continue;
+      if(flash_data[i].start_ms + duration <= flash_now) continue;
 
       //On the first iteration of a flash, take snapshot of the segment's colors
       if(flash_data[i].start_requested){
@@ -157,7 +167,7 @@ struct FlashEffect : Usermod {
         flash_data[i].start_requested = false;
       }
 
-      impulse = impulseResponse(flash_now - flash_data[i].start_ms);
+      impulse = impulseResponse(flash_now - flash_data[i].start_ms, duration);
       uint32_t targetColor = color_fade(flash_data[i].color, flash_data[i].velocity * 2);
       flash_pixel_range(drumStart, drumEnd, impulse, targetColor);
     }
@@ -181,8 +191,8 @@ struct FlashEffect : Usermod {
   }
 
 
-  uint32_t impulseResponse(uint32_t elapsed_ms){
-    uint32_t response = 256 * (default_duration_ms-elapsed_ms) / default_duration_ms;
+  uint32_t impulseResponse(uint32_t elapsed_ms, uint32_t max_duration){
+    uint32_t response = 256 * (max_duration-elapsed_ms) / max_duration;
     if (response > 255) response = 255;
     if (response <= 0) response = 1;
     return response;
