@@ -52,7 +52,7 @@ struct FlashEffect : Usermod {
   * Add settings to the configuration file
   */
   void addToConfig(JsonObject& root) override {
-    JsonObject top = root.createNestedObject(flash_effect_name);
+    JsonObject top = root.createNestedObject(FPSTR(flash_effect_name));
     top["default_duration_ms"] = default_duration_ms;
     top["drum_length_0"] = drum_lengths[0];
     top["drum_length_1"] = drum_lengths[1];
@@ -71,7 +71,7 @@ struct FlashEffect : Usermod {
   * Read Settings from Configuration File
   */
   bool readFromConfig(JsonObject& root) override {
-    JsonObject top = root[flash_effect_name];
+    JsonObject top = root[FPSTR(flash_effect_name)];
     bool configComplete = !top.isNull();
     configComplete &= getJsonValue(top["default_duration_ms"], default_duration_ms, 200);
     configComplete &= getJsonValue(top["drum_length_0"], drum_lengths[0], 0);
