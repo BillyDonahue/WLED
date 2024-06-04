@@ -35,7 +35,7 @@ struct FlashEffect : Usermod {
   bool initDone = false;
   uint16_t default_duration_ms = 200;
   bool enabled = true;
-  uint8_t drum_lengths[10];
+  uint8_t drum_lengths[10]{};
   uint32_t pixel_colors[1024];
 
   void setup() override {
@@ -131,7 +131,7 @@ struct FlashEffect : Usermod {
       flash_data[seg_id].start_requested = true;
       flash_data[seg_id].color = color;
       flash_data[seg_id].duration_ms = duration_ms;
-      Serial.printf("flash_effect seg_id=%d vel=%d,col=%x\n", seg_id, velocity, color);
+      Serial.printf("flash_effect seg_id=%d vel=%d,col=%x, dur:%d\n", seg_id, velocity, color, duration_ms);
     }
   }
 
@@ -193,9 +193,7 @@ struct FlashEffect : Usermod {
 
   uint32_t impulseResponse(uint32_t elapsed_ms, uint32_t max_duration){
     uint32_t response = 256 * (max_duration-elapsed_ms) / max_duration;
-    if (response > 255) response = 255;
-    if (response <= 0) response = 1;
-    return response;
+    return constrain(response, 0, 255);
   }
 
   /*
