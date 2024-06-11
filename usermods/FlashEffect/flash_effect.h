@@ -105,6 +105,10 @@ struct FlashEffect : Usermod {
     }
     JsonObject flash = root["flash"];
     if(flash.isNull()) return;
+    uint8_t choke = 0;
+    if(!flash["choke"].isNull()){
+      choke = flash["choke"];
+    }
     uint8_t velocity = 64;
     if(!flash["vel"].isNull()){
       velocity = flash["vel"];
@@ -126,11 +130,17 @@ struct FlashEffect : Usermod {
     for(uint8_t i = 0; i < seg_arr.size(); i++){
       seg_id = flash["seg"][i];
       if(seg_id>=256) continue;
-      flash_data[seg_id].start_ms = millis();
+      
       flash_data[seg_id].velocity = velocity;
       flash_data[seg_id].start_requested = true;
       flash_data[seg_id].color = color;
-      flash_data[seg_id].duration_ms = duration_ms;
+      if(choke>0){
+        flash_data[seg_id].duration_ms = 0;
+        flash_data[seg_id].start_ms = 0;
+      }else{
+        flash_data[seg_id].duration_ms = duration_ms;
+        flash_data[seg_id].start_ms = millis();
+      }
       Serial.printf("flash_effect seg_id=%d vel=%d,col=%x, dur:%d\n", seg_id, velocity, color, duration_ms);
     }
   }
