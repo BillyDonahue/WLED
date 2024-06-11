@@ -2,6 +2,8 @@
 
 #include "../../wled00/wled.h"
 
+const String flash_build_id = "choke on this UDP";
+
 /**
 platformio_override.ini example to enable this mod:
 
@@ -65,6 +67,7 @@ struct FlashEffect : Usermod {
     top["drum_length_8"] = drum_lengths[8];
     top["drum_length_9"] = drum_lengths[9];
     top["enabled"] = enabled;
+    top["build_id"] = flash_build_id;
   }
 
   /*
@@ -130,7 +133,6 @@ struct FlashEffect : Usermod {
     for(uint8_t i = 0; i < seg_arr.size(); i++){
       seg_id = flash["seg"][i];
       if(seg_id>=256) continue;
-      
       flash_data[seg_id].velocity = velocity;
       flash_data[seg_id].start_requested = true;
       flash_data[seg_id].color = color;
